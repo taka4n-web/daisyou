@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>どっちが おおきい？</title>
+<style>
+  :root{
+    --paper:#F6EEDC;        /* ざらっとした がようし */
+    --ink:#54422E;          /* ちゃいろい クレヨン */
+    --left-bg:#CFE6E0;      /* みずいろ パステル */
+    --right-bg:#F6D7CF;     /* ももいろ パステル */
+    --accent:#E8A33D;       /* はちみついろ */
+    --good:#7FB069;
+    --bad:#D96C5F;
+    --wobble:255px 25px 225px 25px / 25px 225px 25px 255px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent;}
+  html,body{height:100%; overflow:hidden;}
+  body{
+    font-family:'Hiragino Maru Gothic ProN','BIZ UDGothic','Rounded Mplus 1c','Courier New',sans-serif;
+    background:var(--paper);
+    color:var(--ink);
+    /* がようし の しつかん */
+    background-image:radial-gradient(rgba(84,66,46,.05) 1px, transparent 1.5px);
+    background-size:22px 22px;
+    user-select:none;
+    display:flex; flex-direction:column;
+  }
+
+  /* ── ヘッダー ── */
+  header{
+    display:flex; justify-content:center; gap:10px; flex-wrap:wrap;
+    padding:10px 8px 6px;
+  }
+  .badge{
+    border:3px solid var(--ink);
+    border-radius:30px 8px 26px 10px / 10px 26px 8px 30px;
+    background:#fff;
+    padding:6px 14px;
+    font-size:clamp(14px,2.6vw,20px);
+    box-shadow:3px 3px 0 rgba(84,66,46,.18);
+    transform:rotate(-1deg);
+  }
+  .badge:nth-child(2){transform:rotate(1deg);}
+  .badge:nth-child(3){transform:rotate(-0.5deg);}
+  .badge b{font-size:1.25em; color:var(--accent); -webkit-text-stroke:.5px var(--ink);}
+  .badge.timer b{color:var(--bad);}
+
+  /* ── メイン ── */
+  main{flex:1; position:relative; display:flex; padding:8px; gap:8px; min-height:0;}
+
+  .side{
+    flex:1; border:5px solid var(--ink);
+    border-radius:var(--wobble);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:4vh; cursor:pointer; position:relative;
+    transition:transform .12s;
+    min-width:0;
+  }
+  .side:active{transform:scale(.97);}
+  #leftSide{background:var(--left-bg); transform:rotate(-.6deg);}
+  #rightSide{background:var(--right-bg); transform:rotate(.6deg);}
+
+  .num{
+    font-size:clamp(64px,16vw,150px);
+    line-height:1;
+    letter-spacing:.04em;
+    text-shadow:4px 4px 0 rgba(255,255,255,.7);
+    transition:transform .25s;
+    pointer-events:none;
+  }
+
+  /* ヒント（100のシート・10のたば・1のバラ） */
+  .hint{
+    display:flex; align-items:flex-end; justify-content:center; gap:10px;
+    flex-wrap:wrap; padding:0 8px; pointer-events:none;
+    min-height:40px; max-width:95%;
+  }
+  .hgroup{display:flex; align-items:flex-end; gap:3px; flex-wrap:wrap; justify-content:center; max-width:46%;}
+  .b100{
+    width:30px; height:30px; border:2px solid var(--ink); border-radius:5px 2px 6px 3px;
+    background:
+      linear-gradient(rgba(84,66,46,.25) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(84,66,46,.25) 1px, transparent 1px),
+      #FBE6A2;
+    background-size:7.5px 7.5px;
+  }
+  .b10{width:8px; height:30px; border:2px solid var(--ink); border-radius:3px; background:#A8D8B9;}
+  .b1{width:9px; height:9px; border:2px solid var(--ink); border-radius:50%; background:#F2B6C1;}
+
+  /* まんなかの VS */
+  #vs{
+    position:absolute; left:50%; top:50%; transform:translate(-50%,-50%) rotate(-6deg);
+    background:#fff; border:4px solid var(--ink); border-radius:50%;
+    width:clamp(56px,9vw,84px); height:clamp(56px,9vw,84px);
+    display:flex; align-items:center; justify-content:center;
+    font-size:clamp(20px,3.4vw,30px);
+    box-shadow:3px 3px 0 rgba(84,66,46,.2);
+    pointer-events:none; z-index:5;
+  }
+
+  /* レベル3の はやさバー */
+  #speedBar{
+    position:absolute; top:-2px; left:6%; right:6%; height:10px;
+    border:3px solid var(--ink); border-radius:10px; background:#fff;
+    overflow:hidden; display:none; z-index:6;
+  }
+  #speedFill{height:100%; background:var(--bad); width:100%;}
+
+  /* ── あしもと（マスコット） ── */
+  footer{
+    display:flex; align-items:center; justify-content:center; gap:10px;
+    padding:6px 10px 12px; min-height:64px;
+  }
+  #mascot{font-size:34px; display:inline-block; transition:transform .3s;}
+  #speech{
+    border:3px solid var(--ink); background:#fff;
+    border-radius:18px 6px 18px 6px;
+    padding:6px 14px; font-size:clamp(14px,2.6vw,19px);
+    position:relative;
+  }
+
+  /* ── こうかおん もじ ── */
+  .sfx{
+    position:fixed; z-index:50; pointer-events:none;
+    font-size:clamp(40px,9vw,84px);
+    color:var(--accent); -webkit-text-stroke:2px var(--ink);
+    text-shadow:4px 4px 0 rgba(84,66,46,.25);
+    animation:sfxPop .7s forwards;
+    white-space:nowrap;
+  }
+  .sfx.sad{color:var(--bad); font-size:clamp(30px,6vw,56px); animation:sfxSink .8s forwards;}
+  @keyframes sfxPop{
+    0%{transform:translate(-50%,-50%) scale(.2) rotate(-8deg); opacity:0;}
+    35%{transform:translate(-50%,-50%) scale(1.25) rotate(3deg); opacity:1;}
+    100%{transform:translate(-50%,-70%) scale(1) rotate(0); opacity:0;}
+  }
+  @keyframes sfxSink{
+    0%{transform:translate(-50%,-50%) scale(1); opacity:1;}
+    100%{transform:translate(-50%,-10%) scale(.7) rotate(6deg); opacity:0;}
+  }
+
+  /* せいかい・ふせいかい アニメ */
+  .winner .num{animation:doon .55s;}
+  @keyframes doon{
+    0%{transform:scale(1);}
+    40%{transform:scale(1.6) rotate(-3deg);}
+    70%{transform:scale(1.35) rotate(2deg);}
+    100%{transform:scale(1.4);}
+  }
+  .loserLeft{animation:pyoonL .55s forwards;}
+  .loserRight{animation:pyoonR .55s forwards;}
+  @keyframes pyoonL{
+    0%{transform:rotate(-.6deg);}
+    25%{transform:rotate(-.6deg) scale(.9);}
+    100%{transform:translateX(-130vw) rotate(-540deg);}
+  }
+  @keyframes pyoonR{
+    0%{transform:rotate(.6deg);}
+    25%{transform:rotate(.6deg) scale(.9);}
+    100%{transform:translateX(130vw) rotate(540deg);}
+  }
+  .henyo{animation:henyo .6s;}
+  @keyframes henyo{
+    0%{transform:scale(1,1);}
+    30%{transform:scale(1.15,.55) translateY(14%);}
+    50%{transform:scale(.9,1.05);}
+    70%{transform:scale(1.05,.85) translateY(5%);}
+    100%{transform:scale(1,1);}
+  }
+
+  /* ── スタート・けっか がめん ── */
+  .screen{
+    position:fixed; inset:0; z-index:100;
+    background:var(--paper);
+    background-image:radial-gradient(rgba(84,66,46,.05) 1px, transparent 1.5px);
+    background-size:22px 22px;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:3vh; text-align:center; padding:20px;
+  }
+  .screen.hidden{display:none;}
+  h1{
+    font-size:clamp(30px,7vw,58px);
+    transform:rotate(-2deg);
+    -webkit-text-stroke:1px var(--ink);
+    color:var(--accent);
+    text-shadow:5px 5px 0 rgba(84,66,46,.15);
+  }
+  .sub{font-size:clamp(15px,3vw,22px); line-height:1.9;}
+  .bigBtn{
+    font-family:inherit; font-size:clamp(22px,4.5vw,34px); color:var(--ink);
+    background:#fff; border:5px solid var(--ink);
+    border-radius:var(--wobble);
+    padding:16px 46px; cursor:pointer;
+    box-shadow:6px 6px 0 rgba(84,66,46,.25);
+    transition:transform .1s, box-shadow .1s;
+  }
+  .bigBtn:active{transform:translate(4px,4px); box-shadow:2px 2px 0 rgba(84,66,46,.25);}
+  #startChar,#endChar{font-size:clamp(56px,12vw,110px); animation:sway 2.4s ease-in-out infinite;}
+  @keyframes sway{0%,100%{transform:rotate(-5deg);}50%{transform:rotate(5deg);}}
+  #resultMsg{font-size:clamp(20px,4.5vw,32px); line-height:1.8;}
+  #resultScore{font-size:clamp(48px,11vw,96px); color:var(--accent); -webkit-text-stroke:1.5px var(--ink);}
+
+  #levelUpBanner{
+    position:fixed; left:50%; top:18%; transform:translateX(-50%) rotate(-3deg);
+    z-index:60; background:var(--accent); border:4px solid var(--ink);
+    border-radius:20px 8px 20px 8px; padding:10px 26px;
+    font-size:clamp(20px,4vw,32px); color:#fff; -webkit-text-stroke:.8px var(--ink);
+    display:none; animation:bannerIn .9s;
+  }
+  @keyframes bannerIn{
+    0%{transform:translateX(-50%) scale(.3) rotate(-12deg); opacity:0;}
+    30%{transform:translateX(-50%) scale(1.15) rotate(-3deg); opacity:1;}
+    100%{transform:translateX(-50%) scale(1) rotate(-3deg); opacity:1;}
+  }
+
+  /* ── くらいの ヒント（ピンクの まる と やじるし） ── */
+  .num .digit{display:inline-block; position:relative;}
+  .num .digit.hl{color:#E0507A;}
+  .num .digit.hl::after{
+    content:"";
+    position:absolute; inset:-4% -14%;
+    border:4px solid #E0507A;
+    border-radius:50% 45% 55% 48% / 55% 50% 48% 52%;
+    transform:rotate(-5deg);
+  }
+  .num .digit.hl::before{
+    content:"▲";
+    position:absolute; bottom:-0.5em; left:50%;
+    transform:translateX(-50%);
+    font-size:.26em; color:#E0507A;
+  }
+  #placeTag{
+    position:absolute; top:14px; left:50%;
+    transform:translateX(-50%) rotate(-2deg);
+    background:#fff; border:3px solid #E0507A; color:#E0507A;
+    border-radius:18px 6px 18px 6px; padding:5px 16px;
+    font-size:clamp(13px,2.6vw,19px); z-index:7;
+    box-shadow:3px 3px 0 rgba(84,66,46,.15);
+    display:none; white-space:nowrap; pointer-events:none;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:.01s !important; transition-duration:.01s !important;}
+  }
+  @media (max-height:480px){
+    .num{font-size:clamp(48px,12vw,90px);}
+    footer{min-height:44px;}
+  }
+</style>
+</head>
+<body>
+
+<!-- スタートがめん -->
+<div class="screen" id="startScreen">
+  <div id="startChar">🐢</div>
+  <h1>どっちが おおきい？</h1>
+  <p class="sub">
+    ふたつの かずを みて、<br>
+    <b>おおきい ほう</b>を いそいで タップ！
+  </p>
+  <p class="sub" style="font-size:clamp(13px,2.4vw,17px); margin-bottom:1vh;">
+    <b>モードを えらんでね：</b>
+  </p>
+  <div style="display:flex; gap:12px; flex-wrap:wrap; justify-content:center;">
+    <button class="bigBtn" id="startTimeHintBtn" style="font-size:clamp(18px,3.5vw,26px); padding:12px 20px;">⏱️ 時間あり<br>ヒントあり</button>
+    <button class="bigBtn" id="startTimeNoHintBtn" style="font-size:clamp(18px,3.5vw,26px); padding:12px 20px;">⏱️ 時間あり<br>ヒントなし</button>
+    <button class="bigBtn" id="startNoTimeHintBtn" style="font-size:clamp(18px,3.5vw,26px); padding:12px 20px;">∞ 時間なし<br>ヒントあり</button>
+    <button class="bigBtn" id="startNoTimeNoHintBtn" style="font-size:clamp(18px,3.5vw,26px); padding:12px 20px;">∞ 時間なし<br>ヒントなし</button>
+  </div>
+  <p class="sub" style="font-size:clamp(12px,2.2vw,15px); margin-top:1.5vh;">「ヒントあり」は くらべる <b style="color:#E0507A;">くらい</b>に いろが つくよ</p>
+</div>
+
+<!-- けっかがめん -->
+<div class="screen hidden" id="endScreen">
+  <div id="endChar">👑</div>
+  <h1>おしまい！</h1>
+  <div id="resultScore">0もん</div>
+  <p id="resultMsg"></p>
+  <button class="bigBtn" id="retryBtn">もういちど あそぶ</button>
+  <button class="bigBtn" id="modeBtn" style="font-size:clamp(15px,2.8vw,22px); padding:10px 28px;">モードを えらびなおす</button>
+</div>
+
+<!-- レベルアップ -->
+<div id="levelUpBanner">レベルアップ！⭐</div>
+
+<header>
+  <div class="badge timer">のこりじかん <b id="time">60</b> びょう</div>
+  <div class="badge">スコア <b id="score">0</b> もん</div>
+  <div class="badge">レベル <b id="level">1</b></div>
+</header>
+
+<main>
+  <div id="speedBar"><div id="speedFill"></div></div>
+  <div id="placeTag"></div>
+  <div class="side" id="leftSide">
+    <div class="num" id="leftNum">430</div>
+    <div class="hint" id="leftHint"></div>
+  </div>
+  <div id="vs">VS</div>
+  <div class="side" id="rightSide">
+    <div class="num" id="rightNum">403</div>
+    <div class="hint" id="rightHint"></div>
+  </div>
+</main>
+
+<footer>
+  <span id="mascot">🐢</span>
+  <span id="speech">どっちが おおきいかな？</span>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+
+  // ---- ようそ ----
+  var $ = function(id){ return document.getElementById(id); };
+  var leftSide=$("leftSide"), rightSide=$("rightSide");
+  var leftNum=$("leftNum"), rightNum=$("rightNum");
+  var leftHint=$("leftHint"), rightHint=$("rightHint");
+  var timeEl=$("time"), scoreEl=$("score"), levelEl=$("level");
+  var speech=$("speech"), mascot=$("mascot");
+  var speedBar=$("speedBar"), speedFill=$("speedFill");
+  var placeTag=$("placeTag");
+
+  // ---- じょうたい ----
+  var GAME_SEC = 60;
+  var L3_LIMIT_MS = 3500;          // レベル3の 1もんの じかん
+  var PLACE_NAMES = ["ひゃくのくらい","じゅうのくらい","いちのくらい"];
+  var state = {
+    playing:false, score:0, level:1, streak:0,
+    left:0, right:0, timeLeft:GAME_SEC,
+    locked:false, hintMode:true, timedMode:true,
+    timerId:null, qTimerId:null, qStart:0
+  };
+
+  var praises = ["すごい！","やるねえ！","おみごと！","はやい！","てんさい！","その ちょうし！"];
+  var oops    = ["おっとっと","もういっかい！","おちついて〜","よーく みてね"];
+
+  // ---- もんだい づくり ----
+  function rnd(a,b){ return a + Math.floor(Math.random()*(b-a+1)); }
+
+  function normalPair(){
+    var a, b;
+    if(Math.random() < 0.5){
+      a = rnd(100,999); b = rnd(100,999);
+      while(b === a) b = rnd(100,999);
+    }else{
+      // ひゃくのくらい が おなじ もんだい
+      var h = rnd(1,9);
+      a = h*100 + rnd(0,99);
+      b = h*100 + rnd(0,99);
+      while(b === a) b = h*100 + rnd(0,99);
+    }
+    return [a,b];
+  }
+
+  function trickPair(){
+    var p = rnd(0,2), h, t, o, d, n;
+    if(p === 0){ // A: じゅう と いち の いれかえ (430 vs 403)
+      h = rnd(1,9); t = rnd(0,9); o = rnd(0,9);
+      while(o === t) o = rnd(0,9);
+      return [h*100 + t*10 + o, h*100 + o*10 + t];
+    }
+    if(p === 1){ // B: 0 が はいって まぎらわしい (508 vs 580)
+      h = rnd(1,9); d = rnd(1,9);
+      return [h*100 + d, h*100 + d*10];
+    }
+    // C: 1だけ ちがう (299 vs 300)
+    if(Math.random() < 0.5){
+      n = rnd(1,8)*100 + 99;       // x99 vs (x+1)00
+    }else{
+      n = rnd(100,998);
+    }
+    return [n, n+1];
+  }
+
+  function digitsOf(n){
+    return [Math.floor(n/100), Math.floor(n/10)%10, n%10];
+  }
+  function renderNum(el, n, hlIndex){
+    var d = digitsOf(n), html = "";
+    for(var i=0;i<3;i++){
+      html += '<span class="digit' + (i===hlIndex ? ' hl' : '') + '">' + d[i] + '</span>';
+    }
+    el.innerHTML = html;
+  }
+
+  function newQuestion(){
+    var pair = (state.level >= 3) ? trickPair() : normalPair();
+    if(Math.random() < 0.5) pair.reverse();
+    state.left = pair[0]; state.right = pair[1];
+
+    // ヒントあり：くらべる くらいを さがして いろを つける
+    var hl = -1;
+    if(state.hintMode){
+      var da = digitsOf(pair[0]), db = digitsOf(pair[1]);
+      for(var i=0;i<3;i++){
+        if(da[i] !== db[i]){ hl = i; break; }
+      }
+    }
+    renderNum(leftNum, pair[0], hl);
+    renderNum(rightNum, pair[1], hl);
+    if(state.hintMode && hl >= 0){
+      placeTag.textContent = "👀 " + PLACE_NAMES[hl] + "を くらべよう！";
+      placeTag.style.display = "block";
+    }else{
+      placeTag.style.display = "none";
+    }
+
+    // ブロックのヒント（ヒントありモードの レベル1だけ）
+    if(state.hintMode && state.level === 1){
+      drawHint(leftHint, pair[0]);
+      drawHint(rightHint, pair[1]);
+    }else{
+      leftHint.innerHTML = ""; rightHint.innerHTML = "";
+    }
+
+    // レベル3：はやさバー
+    if(state.qTimerId){ clearInterval(state.qTimerId); state.qTimerId = null; }
+    if(state.level >= 3){
+      speedBar.style.display = "block";
+      state.qStart = Date.now();
+      speedFill.style.width = "100%";
+      state.qTimerId = setInterval(function(){
+        var rest = 1 - (Date.now() - state.qStart)/L3_LIMIT_MS;
+        if(rest <= 0){
+          clearInterval(state.qTimerId); state.qTimerId = null;
+          if(state.playing && !state.locked) timeUp();
+        }else{
+          speedFill.style.width = (rest*100) + "%";
+        }
+      }, 50);
+    }else{
+      speedBar.style.display = "none";
+    }
+  }
+
+  function drawHint(el, n){
+    var h = Math.floor(n/100), t = Math.floor(n/10)%10, o = n%10;
+    var html = "";
+    html += group(h, "b100");
+    html += group(t, "b10");
+    html += group(o, "b1");
+    el.innerHTML = html;
+  }
+  function group(count, cls){
+    if(count === 0) return "";
+    var s = '<span class="hgroup">';
+    for(var i=0;i<count;i++) s += '<span class="'+cls+'"></span>';
+    return s + "</span>";
+  }
+
+  // ---- こうかおん もじ ----
+  function sfx(text, x, y, sad){
+    var el = document.createElement("div");
+    el.className = "sfx" + (sad ? " sad" : "");
+    el.textContent = text;
+    el.style.left = x + "px";
+    el.style.top  = y + "px";
+    document.body.appendChild(el);
+    setTimeout(function(){ el.remove(); }, 900);
+  }
+  function centerOf(el){
+    var r = el.getBoundingClientRect();
+    return { x: r.left + r.width/2, y: r.top + r.height/2 };
+  }
+
+  // ---- こたえの しょり ----
+  function answer(side){
+    if(!state.playing || state.locked) return;
+    var picked   = (side === "L") ? state.left  : state.right;
+    var other    = (side === "L") ? state.right : state.left;
+    var pickedEl = (side === "L") ? leftSide  : rightSide;
+    var otherEl  = (side === "L") ? rightSide : leftSide;
+
+    if(picked > other){
+      // せいかい！
+      state.locked = true;
+      if(state.qTimerId){ clearInterval(state.qTimerId); state.qTimerId = null; }
+      state.score++; state.streak++;
+      scoreEl.textContent = state.score;
+
+      var c = centerOf(pickedEl);
+      sfx("ドーン！", c.x, c.y - 40, false);
+      var c2 = centerOf(otherEl);
+      setTimeout(function(){ sfx("ピョーン！", c2.x, c2.y, false); }, 150);
+
+      pickedEl.classList.add("winner");
+      otherEl.classList.add(otherEl === leftSide ? "loserLeft" : "loserRight");
+      say(praises[rnd(0, praises.length-1)], "😆");
+
+      // レベルアップ はんてい（3もん れんぞく）
+      var leveledUp = false;
+      if(state.streak >= 3 && state.level < 3){
+        state.level++; state.streak = 0;
+        levelEl.textContent = state.level;
+        leveledUp = true;
+      }
+
+      setTimeout(function(){
+        pickedEl.classList.remove("winner");
+        otherEl.classList.remove("loserLeft","loserRight");
+        if(leveledUp) showLevelUp();
+        if(state.playing){ newQuestion(); state.locked = false; }
+      }, 650);
+
+    }else{
+      // ふせいかい：へにょ〜
+      state.locked = true;
+      state.streak = 0;
+      var c3 = centerOf(pickedEl);
+      sfx("へにょ〜", c3.x, c3.y, true);
+      pickedEl.classList.add("henyo");
+      say(oops[rnd(0, oops.length-1)], "💦");
+      setTimeout(function(){
+        pickedEl.classList.remove("henyo");
+        state.locked = false;   // おなじ もんだいに さいちょうせん
+      }, 620);
+    }
+  }
+
+  function timeUp(){
+    // レベル3で じかんぎれ → つぎの もんだいへ
+    state.locked = true;
+    state.streak = 0;
+    sfx("じかんぎれ〜", window.innerWidth/2, window.innerHeight/2, true);
+    say("いそいで〜！", "😵");
+    setTimeout(function(){
+      if(state.playing){ newQuestion(); state.locked = false; }
+    }, 600);
+  }
+
+  function showLevelUp(){
+    var b = $("levelUpBanner");
+    b.style.display = "block";
+    // アニメを やりなおす
+    b.style.animation = "none";
+    void b.offsetWidth;
+    b.style.animation = "";
+    setTimeout(function(){ b.style.display = "none"; }, 1400);
+  }
+
+  function say(text, face){
+    speech.textContent = text;
+    if(face) mascot.textContent = face;
+  }
+
+  // ---- ゲームの ながれ ----
+  function startGame(hintMode, timedMode){
+    state.hintMode = hintMode;
+    state.timedMode = timedMode;
+    state.playing = true;
+    state.score = 0; state.level = 1; state.streak = 0;
+    state.timeLeft = GAME_SEC; state.locked = false;
+    scoreEl.textContent = "0";
+    levelEl.textContent = "1";
+    
+    if(state.timedMode){
+      timeEl.textContent = GAME_SEC;
+      timeEl.parentElement.style.display = "inline-block";
+    }else{
+      timeEl.parentElement.style.display = "none";
+    }
+    
+    say("どっちが おおきいかな？", "🐢");
+    $("startScreen").classList.add("hidden");
+    $("endScreen").classList.add("hidden");
+    newQuestion();
+
+    if(state.timedMode){
+      if(state.timerId) clearInterval(state.timerId);
+      state.timerId = setInterval(function(){
+        state.timeLeft--;
+        timeEl.textContent = state.timeLeft;
+        if(state.timeLeft <= 10) say("あと " + state.timeLeft + " びょう！", "⏰");
+        if(state.timeLeft <= 0) endGame();
+      }, 1000);
+    }
+  }
+
+  function endGame(){
+    state.playing = false;
+    clearInterval(state.timerId); state.timerId = null;
+    if(state.qTimerId){ clearInterval(state.qTimerId); state.qTimerId = null; }
+
+    $("resultScore").textContent = state.score + "もん";
+    var msg, face;
+    if(state.score >= 20){ msg = "せいかいできたよ！<br>スーパーチャンピオン！🏆"; face = "🤩"; }
+    else if(state.score >= 12){ msg = "せいかいできたよ！<br>チャンピオン！👑"; face = "😆"; }
+    else if(state.score >= 6){ msg = "せいかいできたよ！<br>あと すこしで チャンピオン！"; face = "😊"; }
+    else { msg = "せいかいできたよ！<br>つぎは もっと いけるよ！"; face = "💪"; }
+    $("resultMsg").innerHTML = msg;
+    $("endChar").textContent = face;
+    $("endScreen").classList.remove("hidden");
+  }
+
+  // ---- イベント ----
+  leftSide.addEventListener("pointerdown", function(){ answer("L"); });
+  rightSide.addEventListener("pointerdown", function(){ answer("R"); });
+  $("startTimeHintBtn").addEventListener("click", function(){ startGame(true, true); });
+  $("startTimeNoHintBtn").addEventListener("click", function(){ startGame(false, true); });
+  $("startNoTimeHintBtn").addEventListener("click", function(){ startGame(true, false); });
+  $("startNoTimeNoHintBtn").addEventListener("click", function(){ startGame(false, false); });
+  $("retryBtn").addEventListener("click", function(){ startGame(state.hintMode, state.timedMode); });
+  $("modeBtn").addEventListener("click", function(){
+    $("endScreen").classList.add("hidden");
+    $("startScreen").classList.remove("hidden");
+  });
+})();
+</script>
+</body>
+</html>
